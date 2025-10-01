@@ -31,7 +31,7 @@ const ScheduleTable = ({
   timeSlotMap,
   onCellClick,
 }) => (
-  <table className="min-w-2xl mx-auto my-6">
+  <table className="min-w-3xl mx-auto my-6">
     <thead>
       <tr className="bg-gray-200">
         <td className="border border-gray-400 px-4 py-2 font-semibold">Time</td>
@@ -48,8 +48,8 @@ const ScheduleTable = ({
     <tbody>
       {generateTimeSlots().map((time, i) => (
         <tr key={i} className={i % 2 === 0 ? "bg-gray-100" : "bg-white"}>
-          <td className="border border-gray-400 px-4 py-2">
-            {time.startTime} - {time.endTime}
+          <td className="border border-gray-400 px-4 py-2 text-center">
+            <b>{time.startTime}</b> - {time.endTime}
           </td>
           {headers.map((day, j) => {
             const startKey = `${day.toUpperCase()}_${time.hour}`;
