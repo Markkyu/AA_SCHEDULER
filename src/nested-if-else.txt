@@ -1,0 +1,37 @@
+    // if (selectedCourse) {
+    //   // if starting (startKey) slot has been occupied => return
+    //   // if ending (endKey) slot has been occupied => return
+    //   if (timeSlotMap.has(startKey) || timeSlotMap.has(endKey)) {
+    //     console.log(`Slot ${startKey} => ${endKey} is already occupied`);
+    //     return;
+    //   }
+    //   console.log(`Current hours week`, selectedCourse.hoursWeek);
+
+    //   if (selectedCourse.hoursWeek > 0) {
+    //     // allocate if hours > 0
+    //     setSelectedCourse((prevCourse) => ({
+    //       ...prevCourse,
+    //       hoursWeek: prevCourse.hoursWeek - duration,
+    //     }));
+
+    //     console.log(`decreased hours week`, selectedCourse.hoursWeek);
+
+    //     if (!(selectedCourse.hoursWeek < 0)) {
+    //       setSchedules((prev) => [
+    //         ...prev,
+    //         {
+    //           course: selectedCourse,
+    //           startTime: startKey,
+    //           endTime: endKey,
+    //           duration: duration,
+    //         },
+    //       ]);
+    //     } else {
+    //       console.log(`Hours cannot be lost`);
+    //     }
+    //   } else {
+    //     console.log("Cannot allocate as hours will be less than or equal to 0"); // no hours left
+    //   }
+    // } else {
+    //   console.log("No course selected! Please select a course first."); // checked if a "selected course" exists
+    // }

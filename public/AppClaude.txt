@@ -1,0 +1,342 @@
+import { useState, useMemo } from "react";
+
+// Time slot configurations
+const mwfHead = ["Monday", "Wednesday", "Friday"];
+const mwfTime = Array.from({ length: 14 }, (_, i) => i);
+const tthHead = ["Tuesday", "Thursday"];
+const tthTime = Array.from({ length: 9 }, (_, i) => i);
+
+// Enhanced course data
+const mockCourses = [
+  {
+    id: 1,
+    name: "Math 101",
+    hoursWeek: 3,
+    professor: "Dr. Smith",
+    preferredBlock: "MWF",
+    sessionDuration: 1,
+    color: "bg-blue-200 border-blue-400",
+  },
+  {
+    id: 2,
+    name: "English 102",
+    hoursWeek: 3,
+    professor: "Prof. Johnson",
+    preferredBlock: "TTH",
+    sessionDuration: 1.5,
+    color: "bg-green-200 border-green-400",
+  },
+  {
+    id: 3,
+    name: "Computer Science 201",
+    hoursWeek: 4,
+    professor: "Dr. Wilson",
+    preferredBlock: "MWF",
+    sessionDuration: 1,
+    color: "bg-purple-200 border-purple-400",
+  },
+  {
+    id: 4,
+    name: "Physics 202",
+    hoursWeek: 3,
+    professor: "Dr. Brown",
+    preferredBlock: "TTH",
+    sessionDuration: 1.5,
+    color: "bg-orange-200 border-orange-400",
+  },
+];
+
+// Time conversion functions
+const readableMWFTime = (time) => {
+  const start = 7 + time;
+  return `${start}:00 - ${start + 1}:00`;
+};
+
+const readableTThTime = (time) => {
+  const start = 7 + time;
+  return `${start}:00 - ${start + 1}:00`;
+};
+
+// Auto-schedule generation
+const generateSchedule = (courses) => {
+  const schedules = [];
+  const occupiedSlots = new Set();
+
+  // Sort courses by priority (higher hours = higher priority for now)
+  const sortedCourses = [...courses].sort((a, b) => b.hoursWeek - a.hoursWeek);
+
+  sortedCourses.forEach((course) => {
+    const slots = findBestSlots(course, occupiedSlots);
+    if (slots.length > 0) {
+      schedules.push({
+        course: course.name,
+        professor: course.professor,
+        time_slot: slots,
+        color: course.color,
+      });
+      slots.forEach((slot) => occupiedSlots.add(slot));
+    }
+  });
+
+  return schedules;
+};
+
+const findBestSlots = (course, occupiedSlots) => {
+  const { hoursWeek, preferredBlock, sessionDuration } = course;
+  const sessionsNeeded = Math.ceil(hoursWeek / sessionDuration);
+
+  if (preferredBlock === "MWF") {
+    return findMWFSlots(sessionsNeeded, occupiedSlots);
+  } else if (preferredBlock === "TTH") {
+    return findTTHSlots(sessionsNeeded, occupiedSlots);
+  }
+
+  // Try MWF first, then TTH
+  const mwfSlots = findMWFSlots(sessionsNeeded, occupiedSlots);
+  return mwfSlots.length >= sessionsNeeded
+    ? mwfSlots
+    : findTTHSlots(sessionsNeeded, occupiedSlots);
+};
+
+const findMWFSlots = (sessionsNeeded, occupiedSlots) => {
+  const slots = [];
+  const days = ["MONDAY", "WEDNESDAY", "FRIDAY"];
+
+  // Try to distribute across days
+  for (let time = 0; time < 14 && slots.length < sessionsNeeded; time++) {
+    for (
+      let dayIndex = 0;
+      dayIndex < days.length && slots.length < sessionsNeeded;
+      dayIndex++
+    ) {
+      const slot = `${days[dayIndex]}_${time}`;
+      if (!occupiedSlots.has(slot)) {
+        slots.push(slot);
+      }
+    }
+  }
+
+  return slots.slice(0, sessionsNeeded);
+};
+
+const findTTHSlots = (sessionsNeeded, occupiedSlots) => {
+  const slots = [];
+  const days = ["TUESDAY", "THURSDAY"];
+
+  for (let time = 0; time < 9 && slots.length < sessionsNeeded; time++) {
+    for (
+      let dayIndex = 0;
+      dayIndex < days.length && slots.length < sessionsNeeded;
+      dayIndex++
+    ) {
+      const slot = `${days[dayIndex]}_${time}`;
+      if (!occupiedSlots.has(slot)) {
+        slots.push(slot);
+      }
+    }
+  }
+
+  return slots.slice(0, sessionsNeeded);
+};
+
+const ScheduleTable = ({ headers, times, getReadableTime, timeSlotMap }) => (
+  <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+    <div className="bg-gray-800 text-white px-4 py-2">
+      <h3 className="font-semibold text-lg">{headers.join(" / ")} Schedule</h3>
+    </div>
+    <table className="w-full">
+      <thead>
+        <tr className="bg-gray-100">
+          <th className="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-700">
+            Time
+          </th>
+          {headers.map((weekday, i) => (
+            <th
+              key={i}
+              className="border border-gray-300 px-3 py-2 text-left font-semibold text-gray-700"
+            >
+              {weekday}
+            </th>
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {times.map((time, i) => (
+          <tr key={i} className={i % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+            <td className="border border-gray-300 px-3 py-2 font-medium text-gray-600 text-sm">
+              {getReadableTime(time)}
+            </td>
+            {headers.map((day, j) => {
+              const key = `${day.toUpperCase()}_${time}`;
+              const schedule = timeSlotMap.get(key);
+              return (
+                <td
+                  key={j}
+                  className={`border border-gray-300 px-2 py-2 text-sm ${
+                    schedule ? `${schedule.color} border-2` : ""
+                  }`}
+                >
+                  {schedule && (
+                    <div className="space-y-1">
+                      <div className="font-semibold text-gray-800 leading-tight">
+                        {schedule.course}
+                      </div>
+                      <div className="text-xs text-gray-600">
+                        {schedule.professor}
+                      </div>
+                    </div>
+                  )}
+                </td>
+              );
+            })}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+);
+
+const CourseCard = ({ course, onToggle, isSelected }) => (
+  <div
+    className={`p-4 rounded-lg shadow-sm border-2 cursor-pointer transition-all ${
+      isSelected
+        ? `${course.color} border-opacity-100 shadow-md`
+        : "border-gray-200 bg-gray-50 hover:shadow-md"
+    }`}
+    onClick={() => onToggle(course.id)}
+  >
+    <div className="flex justify-between items-start mb-2">
+      <p className="font-semibold text-gray-900 text-sm leading-tight">
+        {course.name}
+      </p>
+      <input
+        type="checkbox"
+        checked={isSelected}
+        onChange={() => {}}
+        className="ml-2"
+      />
+    </div>
+    <p className="text-xs text-gray-600 mb-1">{course.professor}</p>
+    <div className="flex justify-between text-xs text-gray-500">
+      <span>{course.hoursWeek} hrs/week</span>
+      <span>{course.preferredBlock}</span>
+    </div>
+  </div>
+);
+
+const Timetable = () => {
+  const [selectedCourses, setSelectedCourses] = useState(new Set([1, 2, 3, 4]));
+
+  const activeCourses = mockCourses.filter((course) =>
+    selectedCourses.has(course.id)
+  );
+  const schedules = useMemo(
+    () => generateSchedule(activeCourses),
+    [activeCourses]
+  );
+
+  const timeSlotMap = useMemo(() => {
+    const map = new Map();
+    schedules.forEach(({ course, professor, time_slot, color }) => {
+      time_slot.forEach((slot) => {
+        map.set(slot, { course, professor, color });
+      });
+    });
+    return map;
+  }, [schedules]);
+
+  const toggleCourse = (courseId) => {
+    const newSelected = new Set(selectedCourses);
+    if (newSelected.has(courseId)) {
+      newSelected.delete(courseId);
+    } else {
+      newSelected.add(courseId);
+    }
+    setSelectedCourses(newSelected);
+  };
+
+  const regenerateSchedule = () => {
+    // Force re-render by updating a dependency
+    setSelectedCourses(new Set(selectedCourses));
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-100 py-8">
+      <div className="max-w-7xl mx-auto px-4">
+        <h1 className="text-3xl font-bold text-center mb-8 text-gray-800">
+          Automated Schedule Creator
+        </h1>
+
+        {/* Course Selection */}
+        <section className="bg-white shadow-md rounded-xl mb-8 p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold text-gray-800">
+              Select Courses ({selectedCourses.size} selected)
+            </h2>
+            <button
+              onClick={regenerateSchedule}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition text-sm font-medium"
+            >
+              Regenerate Schedule
+            </button>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {mockCourses.map((course) => (
+              <CourseCard
+                key={course.id}
+                course={course}
+                isSelected={selectedCourses.has(course.id)}
+                onToggle={toggleCourse}
+              />
+            ))}
+          </div>
+        </section>
+
+        {/* Schedule Summary */}
+        <section className="bg-white shadow-md rounded-xl mb-8 p-6">
+          <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            Generated Schedule Summary
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {schedules.map((schedule, index) => (
+              <div
+                key={index}
+                className={`p-3 rounded-lg border-l-4 ${schedule.color
+                  .replace("bg-", "border-l-")
+                  .replace("-200", "-400")}`}
+              >
+                <div className="font-semibold text-gray-800">
+                  {schedule.course}
+                </div>
+                <div className="text-sm text-gray-600 mb-1">
+                  {schedule.professor}
+                </div>
+                <div className="text-xs text-gray-500">
+                  {schedule.time_slot.length} sessions scheduled
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        {/* Timetables */}
+        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+          <ScheduleTable
+            headers={mwfHead}
+            times={mwfTime}
+            getReadableTime={readableMWFTime}
+            timeSlotMap={timeSlotMap}
+          />
+          <ScheduleTable
+            headers={tthHead}
+            times={tthTime}
+            getReadableTime={readableTThTime}
+            timeSlotMap={timeSlotMap}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Timetable;

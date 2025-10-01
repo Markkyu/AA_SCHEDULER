@@ -1,0 +1,143 @@
+import { useState, useMemo } from "react";
+import { readableMWFTime, readableTThTime } from "./readableTime";
+
+const mwfHead = ["Monday", "Wednesday", "Friday"];
+const mwfTime = Array.from({ length: 14 }, (_, i) => i);
+
+const tthHead = ["Tuesday", "Thursday"];
+const tthTime = Array.from({ length: 9 }, (_, i) => i);
+
+// mock list of courses
+const mockCourses = [
+  { id: 1, name: "Math 101", hoursWeek: 3 },
+  { id: 2, name: "English 102", hoursWeek: 3 },
+  { id: 3, name: "Computer Programming", hoursWeek: 5 },
+  { id: 4, name: "Physics 202", hoursWeek: 3 },
+];
+
+// Example schedules
+const mockSchedules = [
+  // {
+  //   course: "Math 101",
+  //   time_slot: [
+  //     "MONDAY_0",
+  //     "MONDAY_1",
+  //     "WEDNESDAY_0",
+  //     "WEDNESDAY_1",
+  //     "FRIDAY_0",
+  //     "FRIDAY_1",
+  //   ],
+  // },
+  // {
+  //   course: "English 102",
+  //   time_slot: ["TUESDAY_0", "TUESDAY_3", "THURSDAY_2", "THURSDAY_3"],
+  // },
+  // {
+  //   course: "Computer Science 201",
+  //   time_slot: ["MONDAY_5", "WEDNESDAY_5", "FRIDAY_5", "FRIDAY_6"],
+  // },
+  // {
+  //   course: "Physics 202",
+  //   time_slot: ["TUESDAY_6", "THURSDAY_6", "THURSDAY_7"],
+  // },
+];
+
+const ScheduleTable = ({ headers, times, getReadableTime, timeSlotMap }) => (
+  <table className="min-w-2xl mx-auto my-6">
+    <thead>
+      <tr className="bg-gray-200">
+        <td className="border border-gray-400 px-4 py-2 font-semibold">Time</td>
+        {headers.map((weekday, i) => (
+          <td
+            key={i}
+            className="border border-gray-400 px-4 py-2 font-semibold"
+          >
+            {weekday}
+          </td>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {times.map((time, i) => (
+        <tr key={i} className={i % 2 === 0 ? "bg-gray-100" : "bg-white"}>
+          <td className="border border-gray-400 px-4 py-2">
+            {getReadableTime(time)}
+          </td>
+          {headers.map((day, j) => {
+            const key = `${day.toUpperCase()}_${time}`;
+            const course = timeSlotMap.get(key);
+            return (
+              <td
+                key={j}
+                className={`border border-gray-400 px-4 py-2 ${
+                  course ? "bg-green-200 font-medium" : ""
+                }`}
+              >
+                {course || ""}
+              </td>
+            );
+          })}
+        </tr>
+      ))}
+    </tbody>
+  </table>
+);
+
+const Timetable = () => {
+  const [schedules] = useState(mockSchedules);
+
+  // Build the timeSlotMap once from schedules
+  const timeSlotMap = useMemo(() => {
+    const map = new Map();
+    schedules.forEach(({ course, time_slot }) => {
+      time_slot.forEach((slot) => {
+        map.set(slot, course);
+      });
+    });
+    return map;
+  }, [schedules]);
+
+  return (
+    <>
+      <h1 className="text-2xl font-bold text-center my-6">My Scheduler</h1>
+
+      {/* Mock Courses List */}
+      <section className="max-w-5xl mx-auto p-6 bg-white shadow-md rounded-xl mb-10">
+        <h2 className="text-xl font-semibold mb-4 text-gray-800">
+          Available Courses
+        </h2>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {mockCourses.map((course) => (
+            <div
+              key={course.id}
+              className="p-4 rounded-lg shadow-sm border border-gray-200 bg-gray-50 hover:shadow-md transition"
+            >
+              <p className="font-semibold text-gray-900">{course.name}</p>
+              <p className="text-sm text-gray-600">
+                {course.hoursWeek} hrs/week
+              </p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Timetables */}
+      <main className="flex flex-col lg:flex-row justify-center gap-8">
+        <ScheduleTable
+          headers={mwfHead}
+          times={mwfTime}
+          getReadableTime={readableMWFTime}
+          timeSlotMap={timeSlotMap}
+        />
+        <ScheduleTable
+          headers={tthHead}
+          times={tthTime}
+          getReadableTime={readableTThTime}
+          timeSlotMap={timeSlotMap}
+        />
+      </main>
+    </>
+  );
+};
+
+export default Timetable;

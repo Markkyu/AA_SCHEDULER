@@ -1,0 +1,141 @@
+// import { useEffect, useState } from "react";
+// import { readableMWFTime, readableTThTime } from "./readableTime";
+
+// const mwfHead = ["Monday", "Wednesday", "Friday"];
+// const mwfTime = Array.from({ length: 14 }, (_, i) => i);
+
+// const tthHead = ["Tuesday", "Thursday"];
+// const tthTime = Array.from({ length: 9 }, (_, i) => i);
+
+// const timeSlotMap = new Map();
+
+// const mockCourses = [
+//   { id: 1, name: "Math 101", hoursWeek: 3 },
+//   { id: 2, name: "English 102", hoursWeek: 3 },
+//   { id: 3, name: "Computer Science 201", hoursWeek: 4 },
+//   { id: 4, name: "Physics 202", hoursWeek: 3 },
+// ];
+
+// const Timetable = () => {
+//   const [schedules, setSchedules] = useState(null);
+
+//   schedules?.forEach(({ courses, time_slot }) => {
+//     time_slot.forEach((slot) => {
+//       timeSlotMap.set(slot, courses?.course_name);
+//     });
+//   });
+
+//   return (
+//     <>
+//       <h1 className="text-2xl font-bold text-center my-6">My Scheduler</h1>
+
+//       {/* Mock Courses List */}
+//       <section className="max-w-5xl mx-auto p-6 bg-white shadow-md rounded-xl mb-10">
+//         <h2 className="text-xl font-semibold mb-4 text-gray-800">
+//           Available Courses
+//         </h2>
+//         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+//           {mockCourses.map((course) => (
+//             <div
+//               key={course.id}
+//               className="p-4 rounded-lg shadow-sm border border-gray-200 bg-gray-50 hover:shadow-md transition"
+//             >
+//               <p className="font-semibold text-gray-900">{course.name}</p>
+//               <p className="text-sm text-gray-600">
+//                 {course.hoursWeek} hrs/week
+//               </p>
+//             </div>
+//           ))}
+//         </div>
+//       </section>
+
+//       {/* MWF Table */}
+//       <main className="flex">
+//         <table className="border border-gray-400 border-collapse min-w-[600px] mx-auto my-6">
+//           <thead>
+//             <tr className="bg-gray-200">
+//               <td className="border border-gray-400 px-4 py-2 font-semibold">
+//                 Time
+//               </td>
+//               {mwfHead.map((weekday, i) => (
+//                 <td
+//                   key={i}
+//                   className="border border-gray-400 px-4 py-2 font-semibold"
+//                 >
+//                   {weekday}
+//                 </td>
+//               ))}
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {mwfTime.map((time, i) => (
+//               <tr key={i} className={i % 2 === 0 ? "bg-gray-100" : "bg-white"}>
+//                 <td className="border border-gray-400 px-4 py-2">
+//                   {readableMWFTime(time)}
+//                 </td>
+//                 {mwfHead.map((day, j) => {
+//                   const key = `${day.toUpperCase()}_${time}`;
+//                   const course = timeSlotMap.get(key);
+//                   return (
+//                     <td
+//                       key={j}
+//                       className={`border border-gray-400 px-4 py-2 ${
+//                         course ? "bg-green-200" : ""
+//                       }`}
+//                     >
+//                       {course || ""}
+//                     </td>
+//                   );
+//                 })}
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+
+//         {/* TTH Table */}
+//         <table className="border border-gray-400 border-collapse min-w-[600px] mx-auto my-6">
+//           <thead>
+//             <tr className="bg-gray-200">
+//               <td className="border border-gray-400 px-4 py-2 font-semibold">
+//                 Time
+//               </td>
+//               {tthHead.map((weekday, i) => (
+//                 <td
+//                   key={i}
+//                   className="border border-gray-400 px-4 py-2 font-semibold"
+//                 >
+//                   {weekday}
+//                 </td>
+//               ))}
+//             </tr>
+//           </thead>
+//           <tbody>
+//             {tthTime.map((time, i) => (
+//               <tr key={i} className={i % 2 === 0 ? "bg-gray-100" : "bg-white"}>
+//                 <td className="border border-gray-400 px-4 py-2">
+//                   {readableTThTime(time)}
+//                 </td>
+//                 {tthHead.map((day, j) => {
+//                   const key = `${day.toUpperCase()}_${time}`;
+//                   const course = timeSlotMap.get(key);
+//                   return (
+//                     <td
+//                       key={j}
+//                       className={`border border-gray-400 px-4 py-2 ${
+//                         course ? "bg-green-200" : ""
+//                       }`}
+//                     >
+//                       {course || ""}
+//                     </td>
+//                   );
+//                 })}
+//               </tr>
+//             ))}
+//           </tbody>
+//         </table>
+//       </main>
+//     </>
+//   );
+// };
+
+// export default Timetable;
