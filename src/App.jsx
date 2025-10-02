@@ -3,7 +3,8 @@ import ScheduleTable from "./ScheduleTable";
 import CourseList from "./CourseList";
 import { Switch, Button } from "@mui/material";
 
-import { Radio, RadioGroup, FormControlLabel, FormLabel } from "@mui/material";
+import { Radio, FormControlLabel, FormLabel } from "@mui/material";
+import DurationToggle from "./DurationToggle";
 
 const initialCourses = [
   {
@@ -160,6 +161,17 @@ export default function App() {
     ]);
   };
 
+  const handleRemoveSchedule = (scheduleId) => {
+    setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
+    setCourses((prevCourses) =>
+      prevCourses.map((c) =>
+        c.course_id === schedule.course.course_id
+          ? { ...c, hoursWeek: c.hoursWeek + schedule.duration }
+          : c
+      )
+    );
+  };
+
   return (
     <>
       <main className="flex flex-col justify-center items-center bg-red-200 p-10">
@@ -172,32 +184,11 @@ export default function App() {
 
         {/* 3-button radio for duration */}
         {selectedCourse ? (
-          <>
-            <div className="flex flex-col items-center min-w-md shadow-md bg-white p-8 rounded-xl">
-              <p className="text-blue-700 font-medium">
-                Selected: {selectedCourse.course_name} (
-                {selectedCourse.hoursWeek} hrs left)
-              </p>
-              <FormLabel component="legend">Duration</FormLabel>
-              <RadioGroup
-                row
-                value={duration}
-                onChange={(e) => setDuration(parseFloat(e.target.value))}
-              >
-                <FormControlLabel
-                  value={0.5}
-                  control={<Radio />}
-                  label="0.5 hr"
-                />
-                <FormControlLabel value={1} control={<Radio />} label="1 hr" />
-                <FormControlLabel
-                  value={1.5}
-                  control={<Radio />}
-                  label="1.5 hr"
-                />
-              </RadioGroup>
-            </div>
-          </>
+          <DurationToggle
+            selectedCourse={selectedCourse}
+            duration={duration}
+            setDuration={setDuration}
+          />
         ) : (
           <div className="min-w-md shadow-md bg-white p-8 rounded-xl text-center italic text-gray-600">
             No Course Selected
