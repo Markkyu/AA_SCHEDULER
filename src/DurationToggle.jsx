@@ -8,7 +8,7 @@ export default function DurationToggle({
   return (
     <div className="flex flex-col items-center min-w-md shadow-md bg-white p-8 rounded-xl">
       <p className="text-blue-700 font-medium">
-        Selected: {selectedCourse.course_name} ({selectedCourse.hoursWeek} hrs
+        Selected: {selectedCourse.course_name} ({selectedCourse.hours_week} hrs
         left)
       </p>
       <label className="text-gray-700 font-semibold mt-4 mb-2">Duration</label>

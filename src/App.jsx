@@ -5,48 +5,47 @@ import { Switch, Button } from "@mui/material";
 
 import { Radio, FormControlLabel, FormLabel } from "@mui/material";
 import DurationToggle from "./DurationToggle";
+import { getCourses } from "./api/getCourses";
 
-const initialCourses = [
-  {
-    course_id: 1,
-    course_name: "Programming",
-    hoursWeek: 3,
-    teacher: "Aldwin Ilumin",
-  },
-  { course_id: 2, course_name: "IT Era", hoursWeek: 3, teacher: "Wish Ilumin" },
-  {
-    course_id: 3,
-    course_name: "Python",
-    hoursWeek: 3,
-    teacher: "Dean Magalong",
-  },
-  {
-    course_id: 4,
-    course_name: "Theory",
-    hoursWeek: 3,
-    teacher: "Karen Hermosa",
-  },
-  {
-    course_id: 5,
-    course_name: "Artificial Intelligence",
-    hoursWeek: 3,
-    teacher: "Noelyn Sebua",
-  },
-];
+// const initialCourses = [
+//   {
+//     course_id: 1,
+//     course_code: CCS101,
+//     course_name: "Programming",
+//     hours_week: 3,
+//     teacher: "Aldwin Ilumin",
+//   },
+//   {
+//     course_id: 2,
+//     course_code: CCS102,
+//     course_name: "Living in the IT Era",
+//     hours_week: 3,
+//     teacher: "Wishiel Ilumin",
+//   },
+//   {
+//     course_id: 3,
+//     course_code: CCS103,
+//     course_name: "Python",
+//     hours_week: 3,
+//     teacher: "Dean Magalong",
+//   },
+// ];
+
+const initialCourses = await getCourses();
 
 const times = Array.from({ length: 21 }, (_, i) => i);
 const mwfHead = ["Monday", "Wednesday", "Friday"];
 const tthHead = ["Tuesday", "Thursday"];
 
 export default function App() {
+  // Where you put the courses
   const [courses, setCourses] = useState(initialCourses);
+  // State for selected course
   const [selectedCourse, setSelectedCourse] = useState(null);
-  const [checked, setChecked] = useState(false);
+  // Where you set schedules before mapping
   const [schedules, setSchedules] = useState([]);
+  // Where you set duration with a 3-button radio
   const [duration, setDuration] = useState(1);
-
-  // checked if duration is true
-  // const duration = checked ? 1.5 : 1;
 
   // memoize the function to avoid re-calculations
   const timeSlotMap = useMemo(() => {
@@ -59,12 +58,34 @@ export default function App() {
       const floatEndTime = floatStartTime + duration;
 
       for (let t = floatStartTime; t < floatEndTime; t += 0.5) {
-        map.set(`${day}_${t}`, course.course_name);
+        map.set(`${day}_${t}`, course); // store the whole course object
       }
     });
 
     return map;
   }, [schedules]);
+
+  timeSlotMap.forEach((courseName, slotKey) => {
+    console.log(courseName);
+    console.log(slotKey);
+  });
+
+  const exportToJSON = () => {
+    const result = Array.from(timeSlotMap, ([slotKey, course]) => ({
+      // slotkey is the time_code slot AND course - whole course object
+      schedule_slot: slotKey,
+      course_id: course.course_id,
+      course_code: course.course_code,
+      course_name: course.course_name,
+      assigned_teacher: course.teacher_id, // can just join the teacher table
+      course_college: course.course_college, // to prevent the same class group conflict
+      course_year: course.course_year, // to send the same class group's year level
+      course_semester: course.semester, // to send same the class group's semester
+    }));
+
+    // console.log(result);
+    console.log(JSON.stringify(result, null, 2));
+  };
 
   const handleCellClick = (startKey, endKey, day, timeSlot) => {
     const [dayName, start] = startKey.split("_");
@@ -76,13 +97,6 @@ export default function App() {
 
     // Assume last slot is 20 (since you have 21 slots: 0 → 20)
     const maxSlot = times[times.length - 1]; // 20
-
-    console.log(
-      `is this slot is occupied?`,
-      timeSlotMap.has(startKey),
-      `\nhow about the next slot?`,
-      timeSlotMap.has(endKey)
-    );
 
     // If the end time of subject will exceed the timetable duration
     if (floatEndTime > maxSlot) {
@@ -123,13 +137,13 @@ export default function App() {
     }
 
     // if hours will be less than or equal to 0
-    if (selectedCourse.hoursWeek < 0) {
+    if (selectedCourse.hours_week < 0) {
       console.log(`Cannot allocate as hours will be less than or equal to 0!`);
       return;
     }
 
     // if hours will exceed the remaining hours
-    if (selectedCourse.hoursWeek - duration < 0) {
+    if (selectedCourse.hours_week - duration < 0) {
       console.log(`Hours / week will be below the current duration!`);
       return;
     }
@@ -137,14 +151,14 @@ export default function App() {
     // decrease the hours - week by the selected duration (1/1.5hr)
     setSelectedCourse((prevCourse) => ({
       ...prevCourse,
-      hoursWeek: prevCourse.hoursWeek - duration,
+      hours_week: prevCourse.hours_week - duration,
     }));
 
     // modify the initial lists' hours-week so it wont refresh
     setCourses(
       courses.map((course) =>
         course.course_id === selectedCourse.course_id
-          ? { ...course, hoursWeek: course.hoursWeek - duration }
+          ? { ...course, hours_week: course.hours_week - duration }
           : course
       )
     );
@@ -166,7 +180,7 @@ export default function App() {
     setCourses((prevCourses) =>
       prevCourses.map((c) =>
         c.course_id === schedule.course.course_id
-          ? { ...c, hoursWeek: c.hoursWeek + schedule.duration }
+          ? { ...c, hours_week: c.hours_week + schedule.duration }
           : c
       )
     );
@@ -180,6 +194,7 @@ export default function App() {
           courses={courses}
           setSelectedCourse={setSelectedCourse}
           selectedCourse={selectedCourse}
+          handleRemoveSchedule={handleRemoveSchedule}
         />
 
         {/* 3-button radio for duration */}
@@ -194,6 +209,14 @@ export default function App() {
             No Course Selected
           </div>
         )}
+
+        <Button
+          variant="contained"
+          sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
+          onClick={exportToJSON}
+        >
+          Export Course to JSON
+        </Button>
 
         <main className="flex gap-10">
           {/* Schedule Table MWF */}

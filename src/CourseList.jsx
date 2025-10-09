@@ -29,8 +29,14 @@ export default function CourseList({
                 }
             `}
           >
-            <p className="font-semibold text-gray-900">{course.course_name}</p>
-            <p className="text-sm text-gray-600">{course.hoursWeek} hrs/week</p>
+            <p className=" text-gray-900">
+              <b>{course.course_code}</b>
+              {" - "}
+              <span>{course.course_name}</span>
+            </p>
+            <p className="text-sm text-gray-600">
+              {course.hours_week} hrs/week
+            </p>
           </div>
         ))}
       </div>
