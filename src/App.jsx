@@ -1,41 +1,25 @@
 import { useState, useMemo, useEffect } from "react";
 import ScheduleTable from "./ScheduleTable";
 import CourseList from "./CourseList";
-import { Switch, Button } from "@mui/material";
+import { Switch, Button, Snackbar, Alert } from "@mui/material";
 
 import { Radio, FormControlLabel, FormLabel } from "@mui/material";
 import DurationToggle from "./DurationToggle";
 import { getCourses } from "./api/getCourses";
+import validateSchedulePlacement from "./validateSchedulePlacement";
+import exportToJSON from "./utils/exportToJSON";
+import getSchedules from "./api/getSchedules";
+import postSchedule from "./api/postSchedules";
 
-// const initialCourses = [
-//   {
-//     course_id: 1,
-//     course_code: CCS101,
-//     course_name: "Programming",
-//     hours_week: 3,
-//     teacher: "Aldwin Ilumin",
-//   },
-//   {
-//     course_id: 2,
-//     course_code: CCS102,
-//     course_name: "Living in the IT Era",
-//     hours_week: 3,
-//     teacher: "Wishiel Ilumin",
-//   },
-//   {
-//     course_id: 3,
-//     course_code: CCS103,
-//     course_name: "Python",
-//     hours_week: 3,
-//     teacher: "Dean Magalong",
-//   },
-// ];
+import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
+import FileUploadIcon from "@mui/icons-material/FileUpload";
 
 const initialCourses = await getCourses();
+const fetchSchedules = await getSchedules();
 
-const times = Array.from({ length: 21 }, (_, i) => i);
+const times = Array.from({ length: 22 }, (_, i) => i);
 const mwfHead = ["Monday", "Wednesday", "Friday"];
-const tthHead = ["Tuesday", "Thursday"];
+const tthHead = ["Tuesday", "Thursday", "Saturday"];
 
 export default function App() {
   // Where you put the courses
@@ -46,6 +30,11 @@ export default function App() {
   const [schedules, setSchedules] = useState([]);
   // Where you set duration with a 3-button radio
   const [duration, setDuration] = useState(1);
+  // Snackbar state
+  const [openSnackbar, setOpenSnackbar] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+  // State for the currently active course being scheduled
+  const [activeCourse, setActiveCourse] = useState(null);
 
   // memoize the function to avoid re-calculations
   const timeSlotMap = useMemo(() => {
@@ -65,88 +54,89 @@ export default function App() {
     return map;
   }, [schedules]);
 
-  timeSlotMap.forEach((courseName, slotKey) => {
-    console.log(courseName);
-    console.log(slotKey);
+  fetchSchedules.map(({ time_start, ...sched }, index) => {
+    timeSlotMap.set(time_start, { course_code: sched.course_code });
   });
 
-  const exportToJSON = () => {
-    const result = Array.from(timeSlotMap, ([slotKey, course]) => ({
-      // slotkey is the time_code slot AND course - whole course object
-      schedule_slot: slotKey,
-      course_id: course.course_id,
-      course_code: course.course_code,
-      course_name: course.course_name,
-      assigned_teacher: course.teacher_id, // can just join the teacher table
-      course_college: course.course_college, // to prevent the same class group conflict
-      course_year: course.course_year, // to send the same class group's year level
-      course_semester: course.semester, // to send same the class group's semester
-    }));
+  console.log(timeSlotMap);
 
-    // console.log(result);
-    console.log(JSON.stringify(result, null, 2));
+  const handleExport = () => {
+    // function mapToJson(map) {
+    //   const obj = {};
+    //   for (const [key, value] of map) {
+    //     obj[key] = value instanceof Map ? mapToJson(value) : value;
+    //   }
+    //   return JSON.stringify(obj, null, 2);
+    // }
+
+    // console.log(Object.fromEntries(timeSlotMap));
+
+    const myMap = [];
+
+    for (const [key, value] of timeSlotMap) {
+      myMap.push({
+        time_start: key,
+        course_id: value.course_id,
+        teacher_id: value.teacher_id,
+        college_id: value.course_college,
+        year_level: value.course_year,
+        semester: value.semester,
+      });
+    }
+
+    console.log(myMap);
+    // postSchedule(myMap);
   };
+
+  const disableButtonCheck = selectedCourse?.hours_week !== 0;
 
   const handleCellClick = (startKey, endKey, day, timeSlot) => {
     const [dayName, start] = startKey.split("_");
     const floatStartTime = parseFloat(start);
     const floatEndTime = floatStartTime + duration;
-
-    console.log(`Start time:`, floatStartTime);
-    console.log(`End time:`, floatEndTime);
-
-    // Assume last slot is 20 (since you have 21 slots: 0 → 20)
+    // Assume last slot is 20
     const maxSlot = times[times.length - 1]; // 20
 
-    // If the end time of subject will exceed the timetable duration
-    if (floatEndTime > maxSlot) {
-      console.log(`Cannot allocate as it will exceed the timetable's duration`);
+    // validate the placement
+    const error = validateSchedulePlacement(
+      startKey,
+      endKey,
+      dayName,
+      floatStartTime,
+      floatEndTime,
+      maxSlot,
+      timeSlotMap,
+      selectedCourse,
+      duration,
+      activeCourse // 👈 pass it here
+    );
+
+    if (error) {
+      setErrorMessage(error);
+      setOpenSnackbar(true);
+
       return;
     }
 
-    // Check all slots inside the selected duration
-    for (let t = floatStartTime; t < floatEndTime; t += 0.5) {
-      if (timeSlotMap.has(`${dayName}_${t}`)) {
-        console.log(`Slot ${dayName}_${t} is already occupied`);
-        return;
-      }
+    // ✅ Set the activeCourse if none yet
+    if (!activeCourse) {
+      setActiveCourse(selectedCourse);
     }
 
-    // If no course is selected
-    if (!selectedCourse) {
-      console.log(`No course selected! Please select a course first.`);
+    // ✅ Check if user is switching to another course while previous still has hours
+    if (
+      activeCourse &&
+      activeCourse.course_id !== selectedCourse.course_id &&
+      activeCourse.hours_week > 0
+    ) {
+      setErrorMessage(
+        `Finish scheduling "${activeCourse.course_code}" (remaining ${activeCourse.hours_week} hrs) before switching to another course.`
+      );
+      setOpenSnackbar(true);
       return;
     }
 
-    // if there is no selected courses
-    if (!selectedCourse) {
-      console.log(`No course selected! Please SELECT a COURSE first.`);
-      return;
-    }
-
-    // if current slot is occupied
-    if (timeSlotMap.has(startKey)) {
-      console.log(`THIS SLOT is occupied!`);
-      return;
-    }
-
-    // if 1hr or 1.5hr subject will affect following slots
-    if (timeSlotMap.has(endKey) && duration !== 0.5) {
-      console.log(`The NEXT SLOT is occupied!`);
-      return;
-    }
-
-    // if hours will be less than or equal to 0
-    if (selectedCourse.hours_week < 0) {
-      console.log(`Cannot allocate as hours will be less than or equal to 0!`);
-      return;
-    }
-
-    // if hours will exceed the remaining hours
-    if (selectedCourse.hours_week - duration < 0) {
-      console.log(`Hours / week will be below the current duration!`);
-      return;
-    }
+    // If no error proceed to set schedule
 
     // decrease the hours - week by the selected duration (1/1.5hr)
     setSelectedCourse((prevCourse) => ({
@@ -173,22 +163,45 @@ export default function App() {
         duration: duration,
       },
     ]);
+
+    // ✅ If this course just reached 0 hours, clear activeCourse
+    const updatedCourse = courses.find(
+      (c) => c.course_id === selectedCourse.course_id
+    );
+    if (updatedCourse && updatedCourse.hours_week - duration === 0) {
+      setActiveCourse(null);
+    }
   };
 
-  const handleRemoveSchedule = (scheduleId) => {
-    setSchedules((prev) => prev.filter((s) => s.id !== scheduleId));
+  const handleRemoveSchedule = (day, timeKey) => {
+    const course = timeSlotMap.get(timeKey);
+    if (!course) return;
+
+    // Find the schedule to remove
+    const scheduleToRemove = schedules.find(
+      (s) =>
+        s.course.course_id === course.course_id &&
+        s.startTime.startsWith(day.toUpperCase())
+    );
+
+    if (!scheduleToRemove) return;
+
+    // Restore the hours back to the course
     setCourses((prevCourses) =>
       prevCourses.map((c) =>
-        c.course_id === schedule.course.course_id
-          ? { ...c, hours_week: c.hours_week + schedule.duration }
+        c.course_id === course.course_id
+          ? { ...c, hours_week: c.hours_week + scheduleToRemove.duration }
           : c
       )
     );
+
+    // Remove the schedule
+    setSchedules((prev) => prev.filter((s) => s !== scheduleToRemove));
   };
 
   return (
     <>
-      <main className="flex flex-col justify-center items-center bg-red-200 p-10">
+      <main className="flex flex-col justify-center items-center bg-gray-300 p-10">
         {/* Course List */}
         <CourseList
           courses={courses}
@@ -196,7 +209,6 @@ export default function App() {
           selectedCourse={selectedCourse}
           handleRemoveSchedule={handleRemoveSchedule}
         />
-
         {/* 3-button radio for duration */}
         {selectedCourse ? (
           <DurationToggle
@@ -209,15 +221,25 @@ export default function App() {
             No Course Selected
           </div>
         )}
-
-        <Button
-          variant="contained"
-          sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
-          onClick={exportToJSON}
-        >
-          Export Course to JSON
-        </Button>
-
+        <div className="flex gap-2">
+          <Button
+            variant="contained"
+            sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
+            onClick={handleExport}
+            endIcon={<AutoAwesomeIcon />}
+          >
+            Generate Schedule
+          </Button>
+          <Button
+            variant="contained"
+            sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
+            onClick={handleExport}
+            disabled={disableButtonCheck}
+            endIcon={<FileUploadIcon />}
+          >
+            Export Course to JSON
+          </Button>
+        </div>
         <main className="flex gap-10">
           {/* Schedule Table MWF */}
           <div className="bg-white p-4 rounded-2xl my-4">
@@ -226,26 +248,43 @@ export default function App() {
               times={times}
               onCellClick={handleCellClick}
               timeSlotMap={timeSlotMap}
+              onCellRightClick={handleRemoveSchedule}
             />
           </div>
 
+          {/* Schedule Table for TThS */}
           <div className="bg-white p-4 rounded-2xl my-4">
             <ScheduleTable
               headers={tthHead}
               times={times}
               onCellClick={handleCellClick}
               timeSlotMap={timeSlotMap}
+              onCellRightClick={handleRemoveSchedule}
             />
           </div>
         </main>
 
-        {/* Export Schedule Button */}
-        <Button
-          variant="contained"
-          sx={{ fontWeight: 600, borderRadius: "20px" }}
+        {/* Snackbar */}
+        <Snackbar
+          open={openSnackbar}
+          autoHideDuration={4000}
+          onClose={() => setOpenSnackbar(false)}
+          anchorOrigin={{ vertical: "top", horizontal: "center" }}
         >
-          Export Schedules
-        </Button>
+          <Alert
+            onClose={() => setOpenSnackbar(false)}
+            severity="error"
+            variant="filled"
+            sx={{
+              width: "100%",
+              backgroundColor: "#d32f2f",
+              color: "#fff",
+              fontWeight: "bold",
+            }}
+          >
+            {errorMessage}
+          </Alert>
+        </Snackbar>
       </main>
     </>
   );

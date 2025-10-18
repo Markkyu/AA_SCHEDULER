@@ -1,7 +1,7 @@
 import React from "react";
 
 // Generate Time - 30 minute iteration
-function generateTimeSlots(start = 7, end = 20, step = 0.5) {
+function generateTimeSlots(start = 7, end = 21, step = 0.5) {
   const slots = [];
   for (let hour = start; hour < end; hour += step) {
     // Calculate start time
@@ -26,65 +26,72 @@ function generateTimeSlots(start = 7, end = 20, step = 0.5) {
   return slots;
 }
 
-const ScheduleTable = ({
+export default function ScheduleTable({
   headers,
   times,
   getReadableTime,
   timeSlotMap,
   onCellClick,
   handleRemoveSchedule,
-}) => (
-  <table className="min-w-3xl mx-auto my-6">
-    <thead>
-      <tr className="bg-gray-200">
-        <td className="border border-gray-400 px-4 py-2 font-semibold">Time</td>
-        {headers.map((weekday, i) => (
-          <td
-            key={i}
-            className="border border-gray-400 px-4 py-2 font-semibold text-center"
-          >
-            {weekday}
-          </td>
-        ))}
-      </tr>
-    </thead>
-    <tbody>
-      {generateTimeSlots().map((time, i) => {
-        // Determine alternating color groups of 2 rows each
-        const blockIndex = Math.floor(i / 2);
-        const isColoredBlock = blockIndex % 2 === 0;
-
-        return (
-          <tr key={i} className={isColoredBlock ? "bg-gray-100" : "bg-white"}>
-            <td className="border border-gray-400 px-4 py-2 text-center">
-              <b>{time.startTime}</b>
-              {/* <b>{time.startTime}</b> - {time.endTime} */}
+  onCellRightClick,
+}) {
+  return (
+    <table className="min-w-3xl mx-auto my-6">
+      <thead>
+        <tr className="bg-gray-200">
+          <td className="border border-gray-400 px-4 py-2">Time</td>
+          {headers.map((weekday, i) => (
+            <td
+              key={i}
+              className="border border-gray-400 px-4 py-2 font-bold text-center"
+            >
+              {weekday}
             </td>
-            {headers.map((day, j) => {
-              const startKey = `${day.toUpperCase()}_${time.hour}`;
-              const endKey = `${day.toUpperCase()}_${time.hour + 0.5}`;
+          ))}
+        </tr>
+      </thead>
+      <tbody>
+        {generateTimeSlots().map((time, i) => {
+          // Determine alternating color groups of 2 rows each
+          const blockIndex = Math.floor(i / 2);
+          const isColoredBlock = blockIndex % 2 === 0;
 
-              const course = timeSlotMap.get(startKey);
-              const isDisabled = time.disabled;
+          return (
+            <tr key={i} className={isColoredBlock ? "bg-gray-100" : "bg-white"}>
+              <td className="border border-gray-400 px-4 py-2 text-center">
+                <b>{time.startTime}</b>
+                {/* <b>{time.startTime}</b> - {time.endTime} */}
+              </td>
+              {headers.map((day, j) => {
+                const startKey = `${day.toUpperCase()}_${time.hour}`;
+                const endKey = `${day.toUpperCase()}_${time.hour + 0.5}`;
 
-              return (
-                <td
-                  key={j}
-                  className={`border border-gray-400 px-4 py-2 text-center cursor-pointer transition`}
-                  onClick={() => onCellClick(startKey, endKey, day, time)}
-                >
-                  {isDisabled ? "Lunch Break" : course?.course_code || ""}
-                </td>
-              );
-            })}
-          </tr>
-        );
-      })}
-    </tbody>
-  </table>
-);
+                const course = timeSlotMap.get(startKey);
+                const isDisabled = time.disabled;
 
-export default ScheduleTable;
+                return (
+                  <td
+                    key={j}
+                    className={`border border-gray-400 px-4 py-2 text-center cursor-pointer transition font-semibold`}
+                    onClick={() =>
+                      !isDisabled && onCellClick(startKey, endKey, day, time)
+                    }
+                    onContextMenu={(e) => {
+                      e.preventDefault(); // prevent right-click menu
+                      if (!isDisabled) onCellRightClick(day, startKey);
+                    }}
+                  >
+                    {isDisabled ? "Lunch Break" : course?.course_code || ""}
+                  </td>
+                );
+              })}
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
+}
 
 // import React, { useState } from "react";
 
