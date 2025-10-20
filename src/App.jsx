@@ -1,29 +1,33 @@
+// React imports
 import { useState, useMemo, useEffect } from "react";
+// Components
 import ScheduleTable from "./ScheduleTable";
 import CourseList from "./CourseList";
-import { Switch, Button, Snackbar, Alert } from "@mui/material";
-
-import { Radio, FormControlLabel, FormLabel } from "@mui/material";
 import DurationToggle from "./DurationToggle";
-import { getCourses } from "./api/getCourses";
 import validateSchedulePlacement from "./validateSchedulePlacement";
 import exportToJSON from "./utils/exportToJSON";
+// API Imports
+import { getCourses } from "./api/getCourses";
 import getSchedules from "./api/getSchedules";
 import postSchedule from "./api/postSchedules";
-
+// MUI Components and Icons
+import { Switch, Button, Snackbar, Alert } from "@mui/material";
+import { Radio, FormControlLabel, FormLabel } from "@mui/material";
 import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
-import FileUploadIcon from "@mui/icons-material/FileUpload";
+import LockIcon from "@mui/icons-material/Lock";
+import RotateLeftIcon from "@mui/icons-material/RotateLeft";
 
-const initialCourses = await getCourses();
-const fetchSchedules = await getSchedules();
+// const initialCourses = await getCourses();
+// const fetchSchedules = await getSchedules();
 
 const times = Array.from({ length: 22 }, (_, i) => i);
 const mwfHead = ["Monday", "Wednesday", "Friday"];
-const tthHead = ["Tuesday", "Thursday", "Saturday"];
+const tthHead = ["Tuesday", "Thursday"];
 
 export default function App() {
   // Where you put the courses
-  const [courses, setCourses] = useState(initialCourses);
+  // const [courses, setCourses] = useState(initialCourses);
+  const [courses, setCourses] = useState(null);
   // State for selected course
   const [selectedCourse, setSelectedCourse] = useState(null);
   // Where you set schedules before mapping
@@ -35,6 +39,21 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState("");
   // State for the currently active course being scheduled
   const [activeCourse, setActiveCourse] = useState(null);
+  const [fetchSchedules, setFetchSchedules] = useState(null);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const initialCourses = await getCourses();
+      const fetchSchedules = await getSchedules();
+
+      setCourses(initialCourses);
+      setFetchSchedules(fetchSchedules);
+    };
+
+    loadData();
+  }, [selectedCourse]);
+
+  console.log(courses);
 
   // memoize the function to avoid re-calculations
   const timeSlotMap = useMemo(() => {
@@ -54,23 +73,11 @@ export default function App() {
     return map;
   }, [schedules]);
 
-  fetchSchedules.map(({ time_start, ...sched }, index) => {
+  fetchSchedules?.map(({ time_start, ...sched }, index) => {
     timeSlotMap.set(time_start, { course_code: sched.course_code });
   });
 
-  console.log(timeSlotMap);
-
   const handleExport = () => {
-    // function mapToJson(map) {
-    //   const obj = {};
-    //   for (const [key, value] of map) {
-    //     obj[key] = value instanceof Map ? mapToJson(value) : value;
-    //   }
-    //   return JSON.stringify(obj, null, 2);
-    // }
-
-    // console.log(Object.fromEntries(timeSlotMap));
-
     const myMap = [];
 
     for (const [key, value] of timeSlotMap) {
@@ -84,8 +91,8 @@ export default function App() {
       });
     }
 
-    console.log(myMap);
-    // postSchedule(myMap);
+    // console.log(myMap);
+    postSchedule(myMap);
   };
 
   const disableButtonCheck = selectedCourse?.hours_week !== 0;
@@ -108,7 +115,7 @@ export default function App() {
       timeSlotMap,
       selectedCourse,
       duration,
-      activeCourse // 👈 pass it here
+      activeCourse // 👈 pass it here, prevents going to other courses if curr is not finished plotting
     );
 
     if (error) {
@@ -184,16 +191,24 @@ export default function App() {
         s.startTime.startsWith(day.toUpperCase())
     );
 
+    console.log(selectedCourse);
+
     if (!scheduleToRemove) return;
 
     // Restore the hours back to the course
-    setCourses((prevCourses) =>
-      prevCourses.map((c) =>
-        c.course_id === course.course_id
-          ? { ...c, hours_week: c.hours_week + scheduleToRemove.duration }
-          : c
-      )
-    );
+    // setCourses((prevCourses) =>
+    //   prevCourses.map((c) =>
+    //     c.course_id === course.course_id
+    //       ? { ...c, hours_week: c.hours_week + scheduleToRemove.duration }
+    //       : c
+    //   )
+    // );
+
+    // Restore the hours back to the course
+    setSelectedCourse((prevCourse) => ({
+      ...prevCourse,
+      hours_week: prevCourse.hours_week + duration,
+    }));
 
     // Remove the schedule
     setSchedules((prev) => prev.filter((s) => s !== scheduleToRemove));
@@ -225,19 +240,31 @@ export default function App() {
           <Button
             variant="contained"
             sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
-            onClick={handleExport}
             endIcon={<AutoAwesomeIcon />}
           >
-            Generate Schedule
+            Fill-In Schedules
           </Button>
           <Button
             variant="contained"
             sx={{ borderRadius: "20px", fontWeight: 600, marginTop: "10px" }}
             onClick={handleExport}
             disabled={disableButtonCheck}
-            endIcon={<FileUploadIcon />}
+            endIcon={<LockIcon />}
+            color="success"
           >
-            Export Course to JSON
+            Lock Schedule
+          </Button>
+          <Button
+            variant="contained"
+            sx={{
+              borderRadius: "20px",
+              fontWeight: 600,
+              marginTop: "10px",
+              backgroundColor: "gray",
+            }}
+            endIcon={<RotateLeftIcon />}
+          >
+            Reset Non-Locked Schedule
           </Button>
         </div>
         <main className="flex gap-10">
