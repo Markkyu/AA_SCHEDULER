@@ -17,17 +17,19 @@ import AutoAwesomeIcon from "@mui/icons-material/AutoAwesome";
 import LockIcon from "@mui/icons-material/Lock";
 import RotateLeftIcon from "@mui/icons-material/RotateLeft";
 
-// const initialCourses = await getCourses();
-// const fetchSchedules = await getSchedules();
+const initialCourses = await getCourses();
+const fetchSchedules = await getSchedules();
 
 const times = Array.from({ length: 22 }, (_, i) => i);
-const mwfHead = ["Monday", "Wednesday", "Friday"];
-const tthHead = ["Tuesday", "Thursday"];
+const mwfHead = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+// const mwfHead = ["Monday", "Wednesday", "Friday"];
+// const tthHead = ["Tuesday", "Thursday"];
 
 export default function App() {
   // Where you put the courses
-  // const [courses, setCourses] = useState(initialCourses);
-  const [courses, setCourses] = useState(null);
+  const [courses, setCourses] = useState(initialCourses);
+  // const [courses, setCourses] = useState(null);
   // State for selected course
   const [selectedCourse, setSelectedCourse] = useState(null);
   // Where you set schedules before mapping
@@ -39,19 +41,19 @@ export default function App() {
   const [errorMessage, setErrorMessage] = useState("");
   // State for the currently active course being scheduled
   const [activeCourse, setActiveCourse] = useState(null);
-  const [fetchSchedules, setFetchSchedules] = useState(null);
+  // const [fetchSchedules, setFetchSchedules] = useState(null);
 
-  useEffect(() => {
-    const loadData = async () => {
-      const initialCourses = await getCourses();
-      const fetchSchedules = await getSchedules();
+  // useEffect(() => {
+  //   const loadData = async () => {
+  //     const initialCourses = await getCourses();
+  //     const fetchSchedules = await getSchedules();
 
-      setCourses(initialCourses);
-      setFetchSchedules(fetchSchedules);
-    };
+  //     setCourses(initialCourses);
+  //     setFetchSchedules(fetchSchedules);
+  //   };
 
-    loadData();
-  }, [selectedCourse]);
+  //   loadData();
+  // }, [selectedCourse]);
 
   console.log(courses);
 
@@ -76,6 +78,8 @@ export default function App() {
   fetchSchedules?.map(({ time_start, ...sched }, index) => {
     timeSlotMap.set(time_start, { course_code: sched.course_code });
   });
+
+  console.log(timeSlotMap);
 
   const handleExport = () => {
     const myMap = [];
@@ -280,7 +284,7 @@ export default function App() {
           </div>
 
           {/* Schedule Table for TThS */}
-          <div className="bg-white p-4 rounded-2xl my-4">
+          {/* <div className="bg-white p-4 rounded-2xl my-4">
             <ScheduleTable
               headers={tthHead}
               times={times}
@@ -288,7 +292,7 @@ export default function App() {
               timeSlotMap={timeSlotMap}
               onCellRightClick={handleRemoveSchedule}
             />
-          </div>
+          </div> */}
         </main>
 
         {/* Snackbar */}
